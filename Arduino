@@ -2,6 +2,12 @@
 
 int previous_value;
 
+// Speaker Pin
+const int speaker = A2
+
+// Leds pin
+const int leds = A4
+
 // IR Receiver
 const int receiverPin = 5;
 
@@ -13,12 +19,15 @@ const int revleftPin = 7;
 const int pwmrightPin = 9;
 const int revrightPin = 8;
 
-IRrecv irrecv(receiverPin);
-decode_results results;
 
+void setup() {
+  pinMode(pwmleftPin, OUTPUT);
+  pinMode(revrleftPin, OUTPUT);
+  pinMode(pwmrightPin, OUTPUT);
+  pinMode(revrightPin, OUTPUT);
+  pinMode(leds, OUTPUT);
+  pinMode(speaker, OUTPUT);
 
-void setup()
-{
   Serial.begin(9600);
   irrecv.enableIRIn(); // Start the receiver
 
