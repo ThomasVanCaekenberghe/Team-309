@@ -21,12 +21,15 @@ void setup()
 {
   Serial.begin(9600);
   irrecv.enableIRIn(); // Start the receiver
+
+  
   
 }
 
 
 void loop()
 {
+  Serial.println(results.value, HEX); //prints the hex value a a button press
   if (irrecv.decode(&results)) // have we received an IR signal?
   {
     translateIR(); 
@@ -67,6 +70,21 @@ void left_turn()
 }
 
 
+void change_speed()
+{
+  if (revleftPin == HIGH and revrightPin == HIGH)
+  {
+    digitalWrite(revleftPin, LOW);
+    digitalWrite(revrightPin, LOW);  
+  }
+  if (revleftPin == LOW and revrightPin == LOW)
+  {
+    digitalWrite(revleftPin, HIGH);
+    digitalWrite(revrightPin, HIGH);    
+  }
+}
+
+
 void translateIR()
 
 { 
@@ -74,27 +92,28 @@ void translateIR()
   {
     
   case 0x20DF02FD:
-    Serial.print("Forward");
+    Serial.println("Forward");
     //forward();
     break;
 
   case 0x20DF827D:
-    Serial.print("Backward");
+    Serial.println("Backward");
     //backward(); 
     break;
 
   case 0x20DF609F:
-    Serial.print("Left turn");
+    Serial.println("Left turn");
     //right_turn();
     break;
 
   case 0x20DFE01F:
-    Serial.print("Right turn");
+    Serial.println("Right turn");
     //left_turn(); 
     break;
 
   case 0x20DF22DD:  
-    Serial.println("Ok"); 
+    Serial.println("Ok");
+    // change_speed();
     break;
 
   case 0x20DF0DF2:  
