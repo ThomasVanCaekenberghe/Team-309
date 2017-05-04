@@ -20,7 +20,8 @@ const int pwmrightPin = 9;
 const int revrightPin = 8;
 
 
-void setup() {
+void setup() 
+{
   pinMode(pwmleftPin, OUTPUT);
   pinMode(revrleftPin, OUTPUT);
   pinMode(pwmrightPin, OUTPUT);
@@ -30,9 +31,6 @@ void setup() {
 
   Serial.begin(9600);
   irrecv.enableIRIn(); // Start the receiver
-
-  
-  
 }
 
 
