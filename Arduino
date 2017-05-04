@@ -81,7 +81,7 @@ void left_turn()
 
 void change_speed()
 {
-  if (revleftPin == HIGH and revrightPin == HIGH)
+  if (revleftPin == HIGH && revrightPin == HIGH)
   {
     digitalWrite(revleftPin, LOW);
     digitalWrite(revrightPin, LOW);  
