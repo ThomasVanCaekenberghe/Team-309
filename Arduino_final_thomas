@@ -1,0 +1,345 @@
+#include "IRremote.h"
+
+// Speed
+const int speedPin = A0;
+
+// Color Sensor
+const int S0 = A1;
+const int S1 = 2;
+const int S2 = 3;
+const int S3 = 4;
+const int sensorOut = 5;
+int frequency1 = 0;
+int frequency2 = 0;
+int frequency3 = 0;
+
+// Speaker
+const int speakerPin = A2;
+#define c 261
+#define d 294
+#define e 329
+#define f 349
+#define g 391
+#define gS 415
+#define a 440
+#define aS 455
+#define b 466
+#define cH 523
+#define cSH 554
+#define dH 587
+#define dSH 622
+#define eH 659
+#define fH 698
+#define fSH 740
+#define gH 784
+#define gSH 830
+#define aH 880
+
+// IR Receiver
+const int receiverPin = A3;
+char usedVal;
+char lastKnownVal;
+
+// LEDs
+const int ledsPin = A4;
+
+// Lightsensor
+const int sensorPin = A5;
+
+// Left Motor
+const int pwmleftPin = 6;
+const int revleftPin = 7;
+
+//  Right Motor
+const int pwmrightPin = 9;
+const int revrightPin = 8;
+
+IRrecv irrecv(receiverPin);
+decode_results results;
+
+
+void setup()
+{
+  Serial.begin(9600);
+  
+  pinMode(speedPin, OUTPUT);      // A0
+  pinMode(S0, OUTPUT);            // A1
+  pinMode(speakerPin, OUTPUT);    // A2
+  pinMode(receiverPin, INPUT);    // A3
+  pinMode(ledsPin, OUTPUT);       // A4
+  pinMode(sensorPin, INPUT);      // A5
+  pinMode(S1, OUTPUT);            // 2
+  pinMode(S2, OUTPUT);            // 3
+  pinMode(S3, OUTPUT);            // 4
+  pinMode(sensorOut, INPUT);      // 5
+  pinMode(pwmleftPin, OUTPUT);    // 6
+  pinMode(revleftPin, OUTPUT);    // 7
+  pinMode(pwmrightPin, OUTPUT);   // 8
+  pinMode(revrightPin, OUTPUT);   // 9
+
+  irrecv.enableIRIn(); // start the receiver
+}
+
+
+void loop()
+{
+  if (irrecv.decode(&results)) // if signal received
+  {
+    //Serial.println(results.value, HEX);
+    translateIR(); 
+    //delay(250);
+    irrecv.resume(); // receive next value
+  }
+  else // if no signal received
+  {
+    delay(250);
+    stop_all();
+  }
+}
+
+
+void forward()
+{
+  digitalWrite(revleftPin, LOW); 
+  analogWrite(pwmleftPin, 255);
+  digitalWrite(revrightPin, LOW); 
+  analogWrite(pwmrightPin, 255);  
+}
+
+
+void backward()
+{
+  digitalWrite(revleftPin, HIGH);   
+  analogWrite(pwmleftPin, 255);
+  digitalWrite(revrightPin, HIGH);
+  analogWrite(pwmrightPin, 255); 
+}
+
+
+void left_turn()
+{
+  digitalWrite(revleftPin, LOW);
+  analogWrite(pwmleftPin, 255);
+  digitalWrite(revrightPin, HIGH);
+  analogWrite(pwmrightPin, 255);
+}
+
+
+void right_turn()
+{
+  digitalWrite(revleftPin, HIGH);
+  analogWrite(pwmleftPin, 255);
+  digitalWrite(revrightPin, LOW);
+  analogWrite(pwmrightPin, 255);
+}
+
+
+void change_speed()
+{
+  if (digitalRead(speedPin) == HIGH);
+  {
+    digitalWrite(speedPin, LOW); 
+  }
+  if (digitalRead(speedPin) == LOW);
+  {
+    digitalWrite(speedPin, HIGH);    
+  }
+}
+
+
+void stop_all()
+{
+  digitalWrite(revleftPin, LOW);
+  analogWrite(pwmleftPin, 0);
+  digitalWrite(revrightPin, LOW);
+  analogWrite(pwmrightPin, 0); 
+}
+
+
+void switch_leds()
+{
+  if (digitalRead(ledsPin) == LOW);
+  {
+    digitalWrite(ledsPin, HIGH);
+  }
+  if (digitalRead(ledsPin) == HIGH);
+  {
+    digitalWrite(ledsPin, LOW);
+  }
+}
+
+void beep (unsigned char speakerPin, int frequencyInHertz, long timeInMilliseconds)
+{ 
+    int x;   
+    long delayAmount = (long)(1000000/frequencyInHertz);
+    long loopTime = (long)((timeInMilliseconds*1000)/(delayAmount*2));
+    for (x=0;x<loopTime;x++)   
+    {    
+        digitalWrite(speakerPin,HIGH);
+        delayMicroseconds(delayAmount);
+        digitalWrite(speakerPin,LOW);
+        delayMicroseconds(delayAmount);
+    }    
+}
+
+
+void march()
+{ 
+    beep(speakerPin, a, 500); 
+    beep(speakerPin, a, 500);     
+    beep(speakerPin, a, 500); 
+    beep(speakerPin, f, 350); 
+    beep(speakerPin, cH, 150);
+    
+    beep(speakerPin, a, 500);
+    beep(speakerPin, f, 350);
+    beep(speakerPin, cH, 150);
+    beep(speakerPin, a, 1000);
+   
+    
+    beep(speakerPin, eH, 500);
+    beep(speakerPin, eH, 500);
+    beep(speakerPin, eH, 500);    
+    beep(speakerPin, fH, 350); 
+    beep(speakerPin, cH, 150);
+    
+    beep(speakerPin, gS, 500);
+    beep(speakerPin, f, 350);
+    beep(speakerPin, cH, 150);
+    beep(speakerPin, a, 1000);
+  
+    
+    beep(speakerPin, aH, 500);
+    beep(speakerPin, a, 350); 
+    beep(speakerPin, a, 150);
+    beep(speakerPin, aH, 500);
+    beep(speakerPin, gSH, 250); 
+    beep(speakerPin, gH, 250);
+    
+    beep(speakerPin, fSH, 125);
+    beep(speakerPin, fH, 125);    
+    beep(speakerPin, fSH, 250);
+    delay(250);
+    beep(speakerPin, aS, 250);    
+    beep(speakerPin, dSH, 500);  
+    beep(speakerPin, dH, 250);  
+    beep(speakerPin, cSH, 250);  
+
+    
+    beep(speakerPin, cH, 125);  
+    beep(speakerPin, b, 125);  
+    beep(speakerPin, cH, 250);      
+    delay(250);
+    beep(speakerPin, f, 125);  
+    beep(speakerPin, gS, 500);  
+    beep(speakerPin, f, 375);  
+    beep(speakerPin, a, 125); 
+    
+    beep(speakerPin, cH, 500); 
+    beep(speakerPin, a, 375);  
+    beep(speakerPin, cH, 125); 
+    beep(speakerPin, eH, 1000); 
+    
+    
+    beep(speakerPin, aH, 500);
+    beep(speakerPin, a, 350); 
+    beep(speakerPin, a, 150);
+    beep(speakerPin, aH, 500);
+    beep(speakerPin, gSH, 250); 
+    beep(speakerPin, gH, 250);
+    
+    beep(speakerPin, fSH, 125);
+    beep(speakerPin, fH, 125);    
+    beep(speakerPin, fSH, 250);
+    delay(250);
+    beep(speakerPin, aS, 250);    
+    beep(speakerPin, dSH, 500);  
+    beep(speakerPin, dH, 250);  
+    beep(speakerPin, cSH, 250);  
+    
+    
+    beep(speakerPin, cH, 125);  
+    beep(speakerPin, b, 125);  
+    beep(speakerPin, cH, 250);      
+    delay(250);
+    beep(speakerPin, f, 250);  
+    beep(speakerPin, gS, 500);  
+    beep(speakerPin, f, 375);  
+    beep(speakerPin, cH, 125); 
+           
+    beep(speakerPin, a, 500);            
+    beep(speakerPin, f, 375);            
+    beep(speakerPin, c, 125);            
+    beep(speakerPin, a, 1000);       
+}
+
+
+//void recharge()
+//{
+//  digitalWrite(S0,HIGH);
+//  digitalWrite(S1,LOW);
+//  digitalWrite(snelh, HIGH);
+//  analogWrite(links, HIGH);
+//  analogWrite(rechts, HIGH);
+//}
+
+
+void translateIR()
+{ 
+  if (results.value == 0xFFFFFFFF)
+    {
+      usedVal = lastKnownVal;
+    }
+  else
+    {
+      usedVal = results.value;
+    }
+  switch(usedVal) 
+  { 
+  case 0x20DF02FD: // Up Arrow key = forward
+    Serial.println("Forward");
+    forward();
+    break;
+
+  case 0x20DF827D: // Down Arrow key = backward
+    Serial.println("Backward");
+    backward(); 
+    break;
+
+  case 0x20DF609F: // Left Arrow key = turn left
+    Serial.println("Left turn");
+    right_turn();
+    break;
+
+  case 0x20DFE01F: // Right Arrow key = turn right
+    Serial.println("Right turn");
+    left_turn(); 
+    break;
+
+  case 0x20DF22DD: // Ok key = change speed
+    Serial.println("Ok");
+    change_speed();
+    break;
+
+  case 0x20DF906F: // Mute key = Stop
+    Serial.print("Stop");
+    stop_all();
+    break;
+
+  case 0x20DFA956: // Energy key = switch LEDs on/off
+    Serial.print("LEDs");
+    switch_leds();
+    break;
+
+  case 0x20DF0DF2: // Play key = play the Imperial March
+    Serial.println("Play");
+    march();
+    break;
+
+  case 0x20DF10EF: // Off Switch = go to recharge station
+    Serial.println("Recharge");
+    //recharge()
+    break;
+  }
+  delay(100);
+}
