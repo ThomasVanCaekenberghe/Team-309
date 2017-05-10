@@ -1,5 +1,7 @@
 #include "IRremote.h"
 
+//___________________________________________________________________Variables and constants___________________________________________________________________//
+
 // Speed
 const int speedPin = A0;
 
@@ -9,9 +11,9 @@ const int S1 = 2;
 const int S2 = 3;
 const int S3 = 4;
 const int sensorOut = 5;
-int frequency1 = 0;
-int frequency2 = 0;
-int frequency3 = 0;
+int frequency_red;
+int frequency_green;
+int frequency_blue;
 
 // Speaker
 const int speakerPin = A2;
@@ -61,13 +63,16 @@ unsigned long int lastKnownVal = 0x20DF906F ; // set value to stop_all() as defa
 unsigned long int usedVal = 0x20DF906F;  // set value to stop_all() as default
 const unsigned long signal_threshold = 300; // threshold in milliseconds between signals, after which a total shutdown will occur if this value is exceeded
 unsigned long int recv_counter; // each time a signal is recieved, the current time will be ascribed to this parameter
+bool manual = true;
+const int correction_speed = 50;  // the speed to which a wheel will be set to correct the car's path
 
-//___________________________________________________________________SETUP AND LOOP___________________________________________________________________//
+//___________________________________________________________________SETUP___________________________________________________________________//
+
 
 void setup()
 {
   Serial.begin(9600);
-  
+
   pinMode(speedPin, OUTPUT);      // A0
   pinMode(S0, OUTPUT);            // A1
   pinMode(speakerPin, OUTPUT);    // A2
@@ -87,39 +92,23 @@ void setup()
 }
 
 
-void loop()
-{
-  if (irrecv.decode(&results)) // If IR signal received
-  {
-    //Serial.println(results.value, HEX);
-    translateIR(); 
-    recv_counter = millis();
-    irrecv.resume(); // Receive next value
-  }
-  if (is_dark()){
-    leds_on();
-  }
-  if (recv_counter - millis() > signal_threshold) {
-    stop_all();
-  }
-}
 
 //___________________________________________________________________MOVEMENT COMMANDS___________________________________________________________________//
 
 void forward()
 {
-  digitalWrite(revleftPin, LOW); 
+  digitalWrite(revleftPin, LOW);
   analogWrite(pwmleftPin, 255);
-  digitalWrite(revrightPin, LOW); 
-  analogWrite(pwmrightPin, 255);  
+  digitalWrite(revrightPin, LOW);
+  analogWrite(pwmrightPin, 255);
 }
 
 void backward()
 {
-  digitalWrite(revleftPin, HIGH);   
+  digitalWrite(revleftPin, HIGH);
   analogWrite(pwmleftPin, 255);
   digitalWrite(revrightPin, HIGH);
-  analogWrite(pwmrightPin, 255); 
+  analogWrite(pwmrightPin, 255);
 }
 
 void left_turn()
@@ -138,35 +127,45 @@ void right_turn()
   analogWrite(pwmrightPin, 255);
 }
 
+void slow() {
+  digitalWrite(speedPin, LOW);
+}
+void fast() {
+  digitalWrite(speedPin, HIGH);
+}
+
 void change_speed()
 {
   if (digitalRead(speedPin) == HIGH);
   {
-    digitalWrite(speedPin, LOW); 
+    slow();
   }
   if (digitalRead(speedPin) == LOW);
   {
-    digitalWrite(speedPin, HIGH);    
+    fast();
   }
 }
 
-void stop_all()
-{
+void stop_motors(){
   digitalWrite(revleftPin, LOW);
   analogWrite(pwmleftPin, 0);
   digitalWrite(revrightPin, LOW);
-  analogWrite(pwmrightPin, 0); 
-  digitalWrite(speakerPin,LOW);
-  digitalWrite(ledsPin,LOW);
+  analogWrite(pwmrightPin, 0);
+}
+
+void stop_all(){
+  stop_motors();
+  digitalWrite(speakerPin, LOW);
+  digitalWrite(ledsPin, LOW);
 }
 
 //___________________________________________________________________LEDS___________________________________________________________________//
 
-void leds_on(){
-  digitalWrite(ledsPin,HIGH);
+void leds_on() {
+  digitalWrite(ledsPin, HIGH);
 }
 void leds_off() {
-  digitalWrite(ledsPin,LOW);
+  digitalWrite(ledsPin, LOW);
 }
 void switch_leds()
 {
@@ -180,8 +179,8 @@ void switch_leds()
   }
 }
 
-bool is_dark(){
-  if (analogRead(lightCheck)> light_threshold){
+bool is_dark() {
+  if (analogRead(lightCheck) > light_threshold) {
     return true;
   }
   else {
@@ -190,172 +189,254 @@ bool is_dark(){
 }
 
 
-//___________________________________________________________________IR SWITCH___________________________________________________________________//
-void translateIR()
-{ 
-  if (results.value == 0xFFFFFFFF)
-    {
-      usedVal = lastKnownVal;
-    }
-  else
-    {
-      usedVal = results.value;
-    }
-  switch(usedVal) 
-  { 
 
-    
-  case 0x20DF02FD: // Up Arrow key = forward
-    Serial.println("Forward");
-    forward();
-    delay(1000);
-    break;
+//___________________________________________________________________COLOR SENSOR___________________________________________________________________//
 
-  case 0x20DF827D: // Down Arrow key = backward
-    Serial.println("Backward");
-    backward(); 
-    break;
-
-  case 0x20DF609F: // Left Arrow key = turn left
-    Serial.println("Left turn");
-    right_turn();
-    break;
-
-  case 0x20DFE01F: // Right Arrow key = turn right
-    Serial.println("Right turn");
-    left_turn(); 
-    break;
-
-  case 0x20DF22DD: // Ok key = change speed
-    Serial.println("Ok");
-    change_speed();
-    break;
-
-  case 0x20DF906F: // Mute key = Stop
-    Serial.print("Stop");
-    stop_all();
-    break;
-
-  case 0x20DFA956: // Energy key = switch LEDs on/off
-    Serial.print("LEDs");
-    switch_leds();
-    break;
-
-  case 0x20DF0DF2: // Play key = play the Imperial March
-    Serial.println("Play");
-    march();
-    break;
-
-  case 0x20DF10EF: // Off Switch = go to recharge station
-    Serial.println("Recharge");
-    break;
-  }
+void refresh_color() {
+  
+  // Set red filter
+  digitalWrite(S2, LOW); 
+  digitalWrite(S3, LOW);
+  // Read red frequency
+  frequency_red = pulseIn(sensorOut, LOW);
+  Serial.print("R= ");
+  Serial.print(frequency_red);
+  Serial.print("  ");
   delay(100);
+
+  // Set blue filter
+  digitalWrite(S2, LOW);
+  digitalWrite(S3, HIGH);
+  // Read blue frequency
+  frequency_blue = pulseIn(sensorOut, LOW);
+  Serial.print("B= ");
+  Serial.print(frequency_blue);
+  Serial.println("  ");
+  delay(100);
+
 }
+
+void adjust_speed(){
+
+  if (frequency_red <= 8)
+  {
+    analogWrite(pwmleftPin, correction_speed);
+    digitalWrite(pwmrightPin, HIGH);
+  }
+  else if (frequency_blue <= 11)
+  {
+    analogWrite(pwmrightPin, correction_speed);
+    digitalWrite(pwmleftPin, HIGH);
+  }
+  else if (frequency_red >= 15 && frequency_blue >= 15)
+  {
+    stop_motors();
+    leds_on();
+  }
+  else {
+    digitalWrite(pwmrightPin, HIGH);
+    digitalWrite(pwmleftPin, HIGH);
+  }
+}
+
+
 
 //___________________________________________________________________SPEAKER___________________________________________________________________//
 
 void beep (unsigned char speakerPin, int frequencyInHertz, long timeInMilliseconds)
-{ 
-    int x;   
-    long delayAmount = (long)(1000000/frequencyInHertz);
-    long loopTime = (long)((timeInMilliseconds*1000)/(delayAmount*2));
-    for (x=0;x<loopTime;x++)   
-    {    
-        digitalWrite(speakerPin,HIGH);
-        delayMicroseconds(delayAmount);
-        digitalWrite(speakerPin,LOW);
-        delayMicroseconds(delayAmount);
-    }    
+{
+  int x;
+  long delayAmount = (long)(1000000 / frequencyInHertz);
+  long loopTime = (long)((timeInMilliseconds * 1000) / (delayAmount * 2));
+  for (x = 0; x < loopTime; x++)
+  {
+    digitalWrite(speakerPin, HIGH);
+    delayMicroseconds(delayAmount);
+    digitalWrite(speakerPin, LOW);
+    delayMicroseconds(delayAmount);
+  }
 }
 
 void march()
-{ 
-    beep(speakerPin, a, 500); 
-    beep(speakerPin, a, 500);     
-    beep(speakerPin, a, 500); 
-    beep(speakerPin, f, 350); 
-    beep(speakerPin, cH, 150);
-    
-    beep(speakerPin, a, 500);
-    beep(speakerPin, f, 350);
-    beep(speakerPin, cH, 150);
-    beep(speakerPin, a, 1000);
-   
-    
-    beep(speakerPin, eH, 500);
-    beep(speakerPin, eH, 500);
-    beep(speakerPin, eH, 500);    
-    beep(speakerPin, fH, 350); 
-    beep(speakerPin, cH, 150);
-    
-    beep(speakerPin, gS, 500);
-    beep(speakerPin, f, 350);
-    beep(speakerPin, cH, 150);
-    beep(speakerPin, a, 1000);
-  
-    
-    beep(speakerPin, aH, 500);
-    beep(speakerPin, a, 350); 
-    beep(speakerPin, a, 150);
-    beep(speakerPin, aH, 500);
-    beep(speakerPin, gSH, 250); 
-    beep(speakerPin, gH, 250);
-    
-    beep(speakerPin, fSH, 125);
-    beep(speakerPin, fH, 125);    
-    beep(speakerPin, fSH, 250);
-    delay(250);
-    beep(speakerPin, aS, 250);    
-    beep(speakerPin, dSH, 500);  
-    beep(speakerPin, dH, 250);  
-    beep(speakerPin, cSH, 250);  
+{
+  beep(speakerPin, a, 500);
+  beep(speakerPin, a, 500);
+  beep(speakerPin, a, 500);
+  beep(speakerPin, f, 350);
+  beep(speakerPin, cH, 150);
 
-    
-    beep(speakerPin, cH, 125);  
-    beep(speakerPin, b, 125);  
-    beep(speakerPin, cH, 250);      
-    delay(250);
-    beep(speakerPin, f, 125);  
-    beep(speakerPin, gS, 500);  
-    beep(speakerPin, f, 375);  
-    beep(speakerPin, a, 125); 
-    
-    beep(speakerPin, cH, 500); 
-    beep(speakerPin, a, 375);  
-    beep(speakerPin, cH, 125); 
-    beep(speakerPin, eH, 1000); 
-    
-    
-    beep(speakerPin, aH, 500);
-    beep(speakerPin, a, 350); 
-    beep(speakerPin, a, 150);
-    beep(speakerPin, aH, 500);
-    beep(speakerPin, gSH, 250); 
-    beep(speakerPin, gH, 250);
-    
-    beep(speakerPin, fSH, 125);
-    beep(speakerPin, fH, 125);    
-    beep(speakerPin, fSH, 250);
-    delay(250);
-    beep(speakerPin, aS, 250);    
-    beep(speakerPin, dSH, 500);  
-    beep(speakerPin, dH, 250);  
-    beep(speakerPin, cSH, 250);  
-    
-    
-    beep(speakerPin, cH, 125);  
-    beep(speakerPin, b, 125);  
-    beep(speakerPin, cH, 250);      
-    delay(250);
-    beep(speakerPin, f, 250);  
-    beep(speakerPin, gS, 500);  
-    beep(speakerPin, f, 375);  
-    beep(speakerPin, cH, 125); 
-           
-    beep(speakerPin, a, 500);            
-    beep(speakerPin, f, 375);            
-    beep(speakerPin, c, 125);            
-    beep(speakerPin, a, 1000);       
+  beep(speakerPin, a, 500);
+  beep(speakerPin, f, 350);
+  beep(speakerPin, cH, 150);
+  beep(speakerPin, a, 1000);
+
+
+  beep(speakerPin, eH, 500);
+  beep(speakerPin, eH, 500);
+  beep(speakerPin, eH, 500);
+  beep(speakerPin, fH, 350);
+  beep(speakerPin, cH, 150);
+
+  beep(speakerPin, gS, 500);
+  beep(speakerPin, f, 350);
+  beep(speakerPin, cH, 150);
+  beep(speakerPin, a, 1000);
+
+
+  beep(speakerPin, aH, 500);
+  beep(speakerPin, a, 350);
+  beep(speakerPin, a, 150);
+  beep(speakerPin, aH, 500);
+  beep(speakerPin, gSH, 250);
+  beep(speakerPin, gH, 250);
+
+  beep(speakerPin, fSH, 125);
+  beep(speakerPin, fH, 125);
+  beep(speakerPin, fSH, 250);
+  delay(250);
+  beep(speakerPin, aS, 250);
+  beep(speakerPin, dSH, 500);
+  beep(speakerPin, dH, 250);
+  beep(speakerPin, cSH, 250);
+
+
+  beep(speakerPin, cH, 125);
+  beep(speakerPin, b, 125);
+  beep(speakerPin, cH, 250);
+  delay(250);
+  beep(speakerPin, f, 125);
+  beep(speakerPin, gS, 500);
+  beep(speakerPin, f, 375);
+  beep(speakerPin, a, 125);
+
+  beep(speakerPin, cH, 500);
+  beep(speakerPin, a, 375);
+  beep(speakerPin, cH, 125);
+  beep(speakerPin, eH, 1000);
+
+
+  beep(speakerPin, aH, 500);
+  beep(speakerPin, a, 350);
+  beep(speakerPin, a, 150);
+  beep(speakerPin, aH, 500);
+  beep(speakerPin, gSH, 250);
+  beep(speakerPin, gH, 250);
+
+  beep(speakerPin, fSH, 125);
+  beep(speakerPin, fH, 125);
+  beep(speakerPin, fSH, 250);
+  delay(250);
+  beep(speakerPin, aS, 250);
+  beep(speakerPin, dSH, 500);
+  beep(speakerPin, dH, 250);
+  beep(speakerPin, cSH, 250);
+
+
+  beep(speakerPin, cH, 125);
+  beep(speakerPin, b, 125);
+  beep(speakerPin, cH, 250);
+  delay(250);
+  beep(speakerPin, f, 250);
+  beep(speakerPin, gS, 500);
+  beep(speakerPin, f, 375);
+  beep(speakerPin, cH, 125);
+
+  beep(speakerPin, a, 500);
+  beep(speakerPin, f, 375);
+  beep(speakerPin, c, 125);
+  beep(speakerPin, a, 1000);
 }
 
+
+//___________________________________________________________________IR SWITCH___________________________________________________________________//
+void translateIR()
+{
+  if (results.value == 0xFFFFFFFF)
+  {
+    usedVal = lastKnownVal;
+  }
+  else
+  {
+    usedVal = results.value;
+  }
+  switch (usedVal)
+  {
+
+
+    case 0x20DF02FD: // Up Arrow key = forward
+      Serial.println("Forward");
+      forward();
+      delay(1000);
+      break;
+
+    case 0x20DF827D: // Down Arrow key = backward
+      Serial.println("Backward");
+      backward();
+      break;
+
+    case 0x20DF609F: // Left Arrow key = turn left
+      Serial.println("Left turn");
+      right_turn();
+      break;
+
+    case 0x20DFE01F: // Right Arrow key = turn right
+      Serial.println("Right turn");
+      left_turn();
+      break;
+
+    case 0x20DF22DD: // Ok key = change speed
+      Serial.println("Ok");
+      change_speed();
+      break;
+
+    case 0x20DF906F: // Mute key = Stop
+      Serial.print("Stop");
+      stop_all();
+      break;
+
+    case 0x20DFA956: // Energy key = switch LEDs on/off
+      Serial.print("LEDs");
+      switch_leds();
+      break;
+
+    case 0x20DF0DF2: // Play key = play the Imperial March
+      Serial.println("Play");
+      march();
+      break;
+
+    case 0x20DF10EF: // Off Switch = go to recharge station
+      Serial.println("Recharge");
+      manual = false;
+      break;
+  }
+  delay(100);
+}
+
+
+
+
+void loop()
+{
+  if (manual == true) {
+    if (irrecv.decode(&results)) // If IR signal received
+    {
+      //Serial.println(results.value, HEX);
+      translateIR();
+      recv_counter = millis();
+      irrecv.resume(); // Receive next value
+    }
+    if (is_dark()) {
+      leds_on();
+    }
+    if (recv_counter - millis() > signal_threshold) {
+      stop_all();
+    }
+  }
+  else {
+    slow();
+    backward();
+    refresh_color();
+    adjust_speed();
+    delay(200);
+  }
+}
