@@ -136,11 +136,11 @@ void fast() {
 
 void change_speed()
 {
-  if (digitalRead(speedPin) == HIGH);
+  if (digitalRead(speedPin) == HIGH)
   {
     slow();
   }
-  if (digitalRead(speedPin) == LOW);
+  if (digitalRead(speedPin) == LOW)
   {
     fast();
   }
@@ -169,11 +169,11 @@ void leds_off() {
 }
 void switch_leds()
 {
-  if (digitalRead(ledsPin) == LOW);
+  if (digitalRead(ledsPin) == LOW)
   {
     leds_on();
   }
-  if (digitalRead(ledsPin) == HIGH);
+  if (digitalRead(ledsPin) == HIGH)
   {
     leds_off();
   }
@@ -359,6 +359,7 @@ void translateIR()
   {
     usedVal = results.value;
     lastKnownVal = results.value;
+    recv_counter = millis();
   }
   switch (usedVal)
   {
@@ -409,7 +410,7 @@ void translateIR()
       manual = false;
       break;
   }
-  delay(250);
+  delay(100);
 }
 
 
