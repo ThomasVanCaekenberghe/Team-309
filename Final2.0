@@ -218,20 +218,22 @@ void refresh_color() {
 
 void adjust_speed(){
 
-  if (frequency_red <= 8)
+  if (frequency_red <= 30 && frequency_blue <= 30)
   {
     analogWrite(pwmleftPin, correction_speed);
     digitalWrite(pwmrightPin, HIGH);
   }
-  else if (frequency_blue <= 11)
+  else if (frequency_red <= 50 && frequency_blue <= 50)
   {
     analogWrite(pwmrightPin, correction_speed);
     digitalWrite(pwmleftPin, HIGH);
   }
-  else if (frequency_red >= 15 && frequency_blue >= 15)
+  else if (frequency_red >= 70 && frequency_blue >= 70)
   {
     stop_motors();
     leds_on();
+    manual = true
+    
   }
   else {
     digitalWrite(pwmrightPin, HIGH);
