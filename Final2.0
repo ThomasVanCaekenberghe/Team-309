@@ -359,7 +359,6 @@ void translateIR()
   {
     usedVal = results.value;
     lastKnownVal = results.value;
-    recv_counter = millis();
   }
   switch (usedVal)
   {
@@ -410,7 +409,7 @@ void translateIR()
       manual = false;
       break;
   }
-  delay(100);
+  delay(250);
 }
 
 
