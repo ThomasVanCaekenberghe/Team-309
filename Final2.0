@@ -4,6 +4,7 @@
 
 // Speed
 const int speedPin = A0;
+bool speaker_on = false;
 
 // Color Sensor
 const int S0 = A1;
@@ -232,7 +233,7 @@ void adjust_speed(){
   {
     stop_motors();
     leds_on();
-    manual = true
+    manual = true;
     
   }
   else {
@@ -244,6 +245,15 @@ void adjust_speed(){
 
 
 //___________________________________________________________________SPEAKER___________________________________________________________________//
+
+void switch_speaker(){
+  if (speaker_on = true){
+    digitalWrite(speakerPin,LOW);
+  }
+  if (speaker_on = false){
+    march();
+  }
+}
 
 void beep (unsigned char speakerPin, int frequencyInHertz, long timeInMilliseconds)
 {
@@ -404,7 +414,7 @@ void translateIR()
 
     case 0x20DF0DF2: // Play key = play the Imperial March
       Serial.println("Play");
-      march();
+      switch_speaker();
       break;
 
     case 0x20DF10EF: // Off Switch = go to recharge station
@@ -438,8 +448,8 @@ void loop()
     }
   }
   else {
-    slow();
-    backward();
+    //slow();
+    //backward();
     refresh_color();
     adjust_speed();
     delay(200);
