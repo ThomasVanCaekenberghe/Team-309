@@ -45,10 +45,11 @@ const int receiverPin = A3;
 
 // LEDs
 const int ledsPin = A4;
+bool manual_leds = false;
 
 // Lightsensor
 const int lightCheck = A5;
-const int light_threshold = 500;
+const int light_threshold = 200;
 
 // Left Motor
 const int pwmleftPin = 6;
@@ -64,11 +65,11 @@ decode_results results;
 // Drive variables
 unsigned long int lastKnownVal; //= 0x20DF906F ; // set value to stop_all() as default
 unsigned long int usedVal;// = 0x20DF906F;  // set value to stop_all() as default
-const unsigned long signal_threshold = 400; // threshold in milliseconds between signals, after which a total shutdown will occur if this value is exceeded
+const unsigned long signal_threshold = 500; // threshold in milliseconds between signals, after which a total shutdown will occur if this value is exceeded
 unsigned long int recv_counter; // each time a signal is recieved, the current time will be ascribed to this parameter
 bool manual = true;
-const int correction_speed = 100;  // the speed to which a wheel will be set to correct the car's path
-int turn_speed = 150; // The speeds to which the wheels will be set to turn; necessary for turning on 3 or 5V
+const int correction_speed = 50;  // the speed to which a wheel will be set to correct the car's path
+unsigned int turn_speed = 150; // The speeds to which the wheels will be set to turn; necessary for turning on 3 or 5V
 
 //___________________________________________________________________SETUP___________________________________________________________________//
 
@@ -133,23 +134,27 @@ void left_turn()
 }
 
 void slow() {
-  digitalWrite(speedPin, LOW);
-  turn_speed = 255;
+  digitalWrite(speedPin, HIGH);
+  
 }
 void fast() {
-  digitalWrite(speedPin, HIGH);
-  turn_speed = 150;
+  digitalWrite(speedPin, LOW);
+
 }
 
 void change_speed()
-{
-  if (digitalRead(speedPin) == HIGH)
-  {
+{ 
+  switch(digitalRead(speedPin)){
+    case 0:
     slow();
-  }
-  if (digitalRead(speedPin) == LOW)
-  {
+    turn_speed = 255;
+    break;
+
+    case 1:
     fast();
+    turn_speed = 150;
+    break;
+
   }
 }
 
@@ -176,28 +181,27 @@ void leds_off() {
 }
 void switch_leds()
 {
-  if (digitalRead(ledsPin) == LOW)
+  switch(digitalRead(ledsPin))
   {
-    leds_on();
-  }
-  else
-  {
+    case 1:
     leds_off();
+    manual_leds = false;
+    break;
+
+    case 0:
+    leds_on();
+    manual_leds = true;
+    break;
   }
-//  if (digitalRead(ledsPin) == LOW)
-//  {
-//    leds_on();
-//    delay(500);
-//  }
-//  if (digitalRead(ledsPin) == HIGH)
-//  {
-//    leds_off();
-//    delay(500);
-//  }
-}
+
+  }
+
+
 
 bool is_dark() {
-  if (analogRead(lightCheck) > light_threshold) {
+
+  
+  if (analogRead(lightCheck) < light_threshold) {
     return true;
   }
   else {
@@ -210,6 +214,8 @@ bool is_dark() {
 //___________________________________________________________________COLOR SENSOR___________________________________________________________________//
 
 void refresh_color() {
+  digitalWrite(S0, HIGH);
+  digitalWrite(S1, LOW);
   
   // Set red filter
   digitalWrite(S2, LOW); 
@@ -221,43 +227,45 @@ void refresh_color() {
   Serial.print("  ");
   delay(50);
 
-  // Set blue filter
-  digitalWrite(S2, LOW);
-  digitalWrite(S3, HIGH);
-  // Read blue frequency
-  frequency_blue = pulseIn(sensorOut, LOW);
-  Serial.print("B= ");
-  Serial.print(frequency_blue);
-  Serial.println("  ");
-  delay(50);
-
-  //Set green frequency
-  digitalWrite(S2, HIGH);
-  digitalWrite(S3, HIGH);
-  // Read green frequency
-  frequency_green = pulseIn(sensorOut, LOW);
-  Serial.print("G= ");
-  Serial.print(frequency_green);
-  Serial.println("  ");
-  delay(50);
+//  // Set blue filter
+//  digitalWrite(S2, LOW);
+//  digitalWrite(S3, HIGH);
+//  // Read blue frequency
+//  frequency_blue = pulseIn(sensorOut, LOW);
+//  Serial.print("B= ");
+//  Serial.print(frequency_blue);
+//  Serial.println("  ");
+//  delay(50);
+//
+//  //Set green frequency
+//  digitalWrite(S2, HIGH);
+//  digitalWrite(S3, HIGH);
+//  // Read green frequency
+//  frequency_green = pulseIn(sensorOut, LOW);
+//  Serial.print("G= ");
+//  Serial.print(frequency_green);
+//  Serial.println("  ");
+//  delay(50);
 
 }
 
 void adjust_speed(){
 
-  if (frequency_red <= 30 && frequency_blue <= 30)
-  {
-    analogWrite(pwmleftPin, correction_speed);
-    digitalWrite(pwmrightPin, HIGH);
-  }
-  else if (frequency_red <= 50 && frequency_blue <= 50)
+  if (frequency_red <= 32)// && frequency_blue <= 30)
   {
     analogWrite(pwmrightPin, correction_speed);
     digitalWrite(pwmleftPin, HIGH);
   }
-  else if (frequency_red >= 70)
+  else if (frequency_red <= 55) //&& frequency_blue <= 50)
+  {
+    analogWrite(pwmleftPin, correction_speed);
+    digitalWrite(pwmrightPin, HIGH);
+    
+  }
+  else if (frequency_red > 55)
   {
     stop_motors();
+    manual_leds = true;
     leds_on();
     manual = true;
     
@@ -464,12 +472,19 @@ void translateIR()
 
 void loop()
 {
+  
   if (manual == true) {
 
-    if (is_dark()) {
+    if (manual_leds == false){
+    if (is_dark()==true) {
       leds_on();
+      
     }
-    
+    else {
+      leds_off();
+      
+    }
+    }
     if (irrecv.decode(&results)) // If IR signal received
     {
       //Serial.println(results.value, HEX);
@@ -491,6 +506,7 @@ void loop()
 
   else {
     backward();
+    //slow();
     refresh_color();
     adjust_speed();
     delay(color_delay);
